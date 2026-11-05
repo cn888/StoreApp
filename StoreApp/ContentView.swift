@@ -83,7 +83,9 @@ struct ContentView: View {
                             title: vm.buttonTitle(item),
                             needsUpdate: vm.needsUpdate(item),
                             isNew: vm.isNew(item),
-                            iconURL: vm.iconURL(item)) {
+                            iconURL: vm.iconURL(item),
+                            installedVersion: vm.installedVersion(item),
+                            needsOpenToDetect: vm.isVersionUnknown(item)) {
                         install(item)
                     }
                 }
@@ -150,6 +152,8 @@ struct AppCard: View {
     let needsUpdate: Bool
     let isNew: Bool
     let iconURL: URL?
+    let installedVersion: String?
+    let needsOpenToDetect: Bool
     let onTap: () -> Void
 
     @State private var expanded = false
@@ -213,6 +217,16 @@ struct AppCard: View {
             Text("v\(item.latest.version) · \(item.latest.sizeText) · \(item.latest.date)")
                 .font(.system(size: 11))
                 .foregroundStyle(.tertiary)
+            if let mine = installedVersion {
+                Text("已装 v\(mine)")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(VersionTool.compare(item.latest.version, mine) > 0
+                                     ? Theme.update : Color.secondary)
+            } else if needsOpenToDetect {
+                Text("已安装 · 打开一次即可识别版本")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+            }
         }
     }
 

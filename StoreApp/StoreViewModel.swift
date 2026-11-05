@@ -18,22 +18,49 @@ final class StoreViewModel: ObservableObject {
 
     private let instKey = "store.installed"
 
-    // MARK: - 已装版本（本地记录：点过安装就记住版本）
-    private(set) var installed: [String: String] = [:]
+    /// key -> 已装版本（真实探测结果优先，本地点击记录兜底）
+    @Published private(set) var installed: [String: String] = [:]
+    /// key -> 是否已安装（canOpenURL 或钥匙串有记录）
+    @Published private(set) var presence: [String: Bool] = [:]
+    /// 已装但拿不到版本（App 从未启动过）
+    @Published private(set) var versionUnknown: Set<String> = []
 
     init() {
         loadInstalled()
     }
 
     private func loadInstalled() {
-        let d = UserDefaults.standard.dictionary(forKey: instKey) as? [String: String] ?? [:]
-        installed = d
+        installed = UserDefaults.standard.dictionary(forKey: instKey) as? [String: String] ?? [:]
     }
 
     private func markInstalled(_ key: String, _ version: String) {
         installed[key] = version
         UserDefaults.standard.set(installed, forKey: instKey)
-        objectWillChange.send()
+    }
+
+    /// 重新探测所有 App 的安装状态与版本
+    @MainActor
+    func refreshInstallState() {
+        let fromKeychain = InstallProbe.versionMap()
+        var pres: [String: Bool] = [:]
+        var vers: [String: String] = [:]
+        var unknown = Set<String>()
+
+        for item in apps {
+            let kv = fromKeychain[item.bundleId]
+            let openable = InstallProbe.isInstalled(scheme: item.urlScheme)
+            let isThere = openable || (kv != nil)
+            pres[item.key] = isThere
+            if let kv {
+                vers[item.key] = kv
+            } else if isThere {
+                if let mine = installed[item.key] { vers[item.key] = mine }
+                else { unknown.insert(item.key) }
+            }
+        }
+        presence = pres
+        installed = vers
+        versionUnknown = unknown
     }
 
     // MARK: - 拉清单
@@ -59,6 +86,7 @@ final class StoreViewModel: ObservableObject {
             }
             updatedText = m.updated ?? ""
             lastRefresh = Date()
+            await refreshInstallState()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -78,20 +106,38 @@ final class StoreViewModel: ObservableObject {
     }
 
     func needsUpdate(_ item: StoreItem) -> Bool {
-        guard let mine = installed[item.key] else { return false }
+        guard presence[item.key] == true, let mine = installed[item.key] else { return false }
         return VersionTool.compare(item.latest.version, mine) > 0
     }
 
     func isInstalled(_ item: StoreItem) -> Bool {
-        installed[item.key] != nil
+        presence[item.key] == true
+    }
+
+    /// 已装版本（nil = 未装或版本未知）
+    func installedVersion(_ item: StoreItem) -> String? {
+        installed[item.key]
+    }
+
+    func isVersionUnknown(_ item: StoreItem) -> Bool {
+        versionUnknown.contains(item.key)
     }
 
     func buttonTitle(_ item: StoreItem) -> String {
+        guard presence[item.key] == true else { return "获取" }
         if let mine = installed[item.key] {
             if VersionTool.compare(item.latest.version, mine) > 0 { return "更新" }
             return "已装 \(mine)"
         }
-        return "获取"
+        return "已装"
+    }
+
+    /// 打开目标 App，促使其上报版本
+    @MainActor
+    func openApp(_ item: StoreItem, completion: @escaping (Bool) -> Void) {
+        InstallProbe.open(scheme: item.urlScheme) { ok in
+            completion(ok)
+        }
     }
 
     func iconURL(_ item: StoreItem) -> URL? {

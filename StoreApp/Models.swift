@@ -14,8 +14,11 @@ struct StoreItem: Codable, Identifiable {
     var icon: String
     var latest: StoreVersion
     var history: [StoreVersion]?
+    /// 该 App 注册的 URL scheme（用于判断是否已安装，缺省用 key）
+    var scheme: String?
 
     var id: String { key }
+    var urlScheme: String { scheme ?? key }
 }
 
 struct StoreVersion: Codable, Identifiable {

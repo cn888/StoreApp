@@ -34,3 +34,8 @@ targets:
         # 不锁定外观：跟随系统浅色/深色
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
+        # canOpenURL 探测已安装的 App（这里没列的 scheme 探测会恒为 false）
+        LSApplicationQueriesSchemes:
+          - voicerecite
+          - jxsaver
+          - store
