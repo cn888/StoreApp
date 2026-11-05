@@ -20,22 +20,14 @@ targets:
     platform: iOS
     sources:
       - path: StoreApp
+        excludes:
+          - "Info.plist"
     settings:
       base:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_USER_SCRIPT_SANDBOXING: NO
-    info:
-      path: StoreApp/Info.plist
-      properties:
-        CFBundleDisplayName: 应用市场
-        UILaunchScreen: {}
-        UISupportedInterfaceOrientations:
-          - UIInterfaceOrientationPortrait
-        # 不锁定外观：跟随系统浅色/深色
-        NSAppTransportSecurity:
-          NSAllowsArbitraryLoads: true
-        # canOpenURL 探测已安装的 App（这里没列的 scheme 探测会恒为 false）
-        LSApplicationQueriesSchemes:
-          - voicerecite
-          - jxsaver
-          - store
+        # Info.plist 手写入库，直接交给 Xcode，不走 XcodeGen 的 properties 生成（那东西没生效过）
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: StoreApp/Info.plist
+        MARKETING_VERSION: "1.3"
+        CURRENT_PROJECT_VERSION: "1"

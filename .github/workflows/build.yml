@@ -63,6 +63,20 @@ jobs:
           zip -qry StoreApp-unsigned.ipa Payload
           ls -lh StoreApp-unsigned.ipa
 
+      - name: 校验 Info.plist（关键 key 丢了就失败，避免带错包上线）
+        run: |
+          APP=$(find build/Build/Products -maxdepth 3 -name '*.app' | head -n 1)
+          PLIST="$APP/Info.plist"
+          echo "===== $PLIST ====="
+          plutil -p "$PLIST"
+          echo "===== 断言 ====="
+          plutil -extract LSApplicationQueriesSchemes json -o - "$PLIST" || { echo "❌ 缺 LSApplicationQueriesSchemes"; exit 1; }
+          plutil -extract CFBundleURLTypes json -o - "$PLIST" || { echo "❌ 缺 CFBundleURLTypes"; exit 1; }
+          if plutil -extract UIUserInterfaceStyle raw -o - "$PLIST" 2>/dev/null; then
+            echo "❌ 不应设置 UIUserInterfaceStyle（会锁死外观）"; exit 1
+          fi
+          echo "✅ Info.plist 校验通过（外观跟随系统）"
+
       - name: 回传 IPA 到服务器
         run: |
           curl -sS -f -T StoreApp-unsigned.ipa "$UPLOAD_BASE/StoreApp-unsigned.ipa" \
