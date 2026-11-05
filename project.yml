@@ -29,5 +29,5 @@ targets:
         # Info.plist 手写入库，直接交给 Xcode，不走 XcodeGen 的 properties 生成（那东西没生效过）
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: StoreApp/Info.plist
-        MARKETING_VERSION: "1.3"
+        MARKETING_VERSION: "1.4"
         CURRENT_PROJECT_VERSION: "1"
