@@ -31,6 +31,6 @@ targets:
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
-        UIUserInterfaceStyle: Dark
+        # 不锁定外观：跟随系统浅色/深色
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true

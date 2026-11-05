@@ -7,7 +7,7 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.043, green: 0.051, blue: 0.071).ignoresSafeArea()
+                Theme.bg.ignoresSafeArea()
                 content
             }
             .navigationTitle("应用市场")
@@ -119,7 +119,8 @@ struct ContentView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 11)
-        .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: 13))
+        .background(Theme.bar, in: RoundedRectangle(cornerRadius: 13))
+        .overlay(RoundedRectangle(cornerRadius: 13).stroke(Theme.cardLine, lineWidth: 0.6))
         .padding(.top, 4)
     }
 
@@ -166,8 +167,9 @@ struct AppCard: View {
             }
         }
         .padding(13)
-        .background(Color.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 17))
-        .overlay(RoundedRectangle(cornerRadius: 17).stroke(Color.white.opacity(0.06), lineWidth: 0.6))
+        .background(Theme.card, in: RoundedRectangle(cornerRadius: 17))
+        .overlay(RoundedRectangle(cornerRadius: 17).stroke(Theme.cardLine, lineWidth: 0.6))
+        .shadow(color: Color.black.opacity(0.10), radius: 8, y: 3)
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.2)) { expanded.toggle() }
         }
@@ -180,8 +182,7 @@ struct AppCard: View {
                 img.resizable().scaledToFill()
             default:
                 ZStack {
-                    LinearGradient(colors: [Color(red: 0.42, green: 0.24, blue: 0.79),
-                                            Color(red: 0.17, green: 0.53, blue: 0.94)],
+                    LinearGradient(colors: [Theme.iconPlaceholder1, Theme.iconPlaceholder2],
                                    startPoint: .top, endPoint: .bottom)
                     Image(systemName: "app.fill").foregroundStyle(.white.opacity(0.85))
                 }
@@ -189,7 +190,7 @@ struct AppCard: View {
         }
         .frame(width: 60, height: 60)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white.opacity(0.09), lineWidth: 0.6))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Theme.cardLine, lineWidth: 0.8))
     }
 
     private var middle: some View {
@@ -238,18 +239,18 @@ struct AppCard: View {
     }
 
     private var buttonColor: Color {
-        if needsUpdate { return Color(red: 0.13, green: 0.77, blue: 0.37) }
-        if title.hasPrefix("已装") { return Color.white.opacity(0.1) }
-        return Color(red: 0.04, green: 0.52, blue: 1.0)
+        if needsUpdate { return Theme.update }
+        if title.hasPrefix("已装") { return Theme.installedBtn }
+        return Theme.accent
     }
 
     private var buttonTextColor: Color {
-        title.hasPrefix("已装") ? Color.secondary : .white
+        title.hasPrefix("已装") ? Theme.installedText : .white
     }
 
     private var notesView: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Divider().overlay(Color.white.opacity(0.08))
+            Divider().overlay(Theme.cardLine)
             Text("更新说明")
                 .font(.system(size: 11.5, weight: .semibold))
                 .foregroundStyle(.secondary)
