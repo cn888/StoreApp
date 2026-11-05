@@ -1,0 +1,86 @@
+name: Build unsigned IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  ipa:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 选最新 Xcode
+        run: |
+          ls -d /Applications/Xcode*.app 2>/dev/null || true
+          NEWEST=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -n 1)
+          [ -n "$NEWEST" ] && sudo xcode-select -s "$NEWEST"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen || brew upgrade xcodegen
+
+      - name: 生成工程
+        run: xcodegen generate
+
+      - name: 编译（不签名）
+        run: |
+          set +e
+          xcodebuild build \
+            -project StoreApp.xcodeproj \
+            -scheme StoreApp \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=YES \
+            2>&1 | tee build.log | tail -n 80
+          rc=${PIPESTATUS[0]}
+          curl -sS -T build.log "$UPLOAD_BASE/build-${{ matrix.os }}.log" -w "log_put=%{http_code}\n" || true
+          exit $rc
+        env:
+          UPLOAD_BASE: "https://www.airobotbox.com/ups/b01dd76050d78a7571ccbb22301c5489"
+
+      - name: 打包 IPA
+        run: |
+          APP=$(find build/Build/Products -maxdepth 3 -name '*.app' | head -n 1)
+          test -n "$APP" || { echo "没有产物"; exit 1; }
+          echo "app: $APP"
+          rm -rf Payload StoreApp-unsigned.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qry StoreApp-unsigned.ipa Payload
+          ls -lh StoreApp-unsigned.ipa
+
+      - name: 回传 IPA 到服务器
+        run: |
+          curl -sS -f -T StoreApp-unsigned.ipa "$UPLOAD_BASE/StoreApp-unsigned.ipa" \
+            -w "ipa_put=%{http_code} size=%{size_upload}\n"
+          echo "DONE_UPLOAD"
+        env:
+          UPLOAD_BASE: "https://www.airobotbox.com/ups/b01dd76050d78a7571ccbb22301c5489"
+
+      - name: 上传 artifact（备用）
+        uses: actions/upload-artifact@v4
+        with:
+          name: StoreApp-ipa-${{ matrix.os }}
+          path: StoreApp-unsigned.ipa
+          retention-days: 14
+
+      - name: 上传日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.os }}
+          path: build.log
